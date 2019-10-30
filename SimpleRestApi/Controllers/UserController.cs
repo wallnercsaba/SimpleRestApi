@@ -74,7 +74,7 @@ namespace SimpleRestApi.Controllers
         [HttpPost("{id}")]
         public async Task<IActionResult> Add(string id, [FromBody] UserRequest request)
         {
-            if ((await userRepository.Get(id))!=null)
+            if ((await userRepository.Get(id)) != null)
             {
                 return new BadRequestObjectResult("user id exists");
             }
@@ -112,28 +112,37 @@ namespace SimpleRestApi.Controllers
         {
             var image = request.Image;
 
+            List<string> AcceptableImageExtentions = new List<string> { ".jpg", ".jpeg", ".png" };
+
+            string fileExtention = System.IO.Path.GetExtension(image.FileName);
+
+
+            if (!AcceptableImageExtentions.Contains(fileExtention))
+            {
+                return new BadRequestObjectResult("Image must be png, jpg or jpeg");
+            }
             if (image.Length > 10485760)
             {
                 return new BadRequestObjectResult("Max 10 MB");
             }
-
+            
             var user = await userRepository.Get(DefaultUserId);
             if (user.ProfilePicture != null)
             {
-                System.IO.File.Delete(user.ProfilePicture);
+                System.IO.File.Delete(Path.Combine(Path.Combine(Directory.GetCurrentDirectory(), "Images"), Path.GetFileName(user.ProfilePicture)));
             }
 
-            var fileName = Guid.NewGuid().ToString();
-            
+            var fileName = Guid.NewGuid().ToString() + fileExtention;
+
             if (image.Length > 0)
             {
-                using (var fileStream = new FileStream(fileName, FileMode.Create))
+                using (var fileStream = new FileStream(Path.Combine(Path.Combine(Directory.GetCurrentDirectory(), "Images"), fileName), FileMode.Create))
                 {
                     image.CopyTo(fileStream);
                 }
             }
 
-            user.ProfilePicture = fileName;
+            user.ProfilePicture = "/images/" + fileName;
             await userRepository.Update(user);
             await userRepository.SaveChanges();
 
